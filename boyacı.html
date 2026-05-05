@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>BoyacıPro | Stok & Satış Sistemi</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    *{font-family:'Inter',sans-serif;-webkit-tap-highlight-color:transparent;box-sizing:border-box;margin:0;padding:0}
+    html,body{overflow-x:hidden}
+    body{padding-bottom:70px;background:#f9fafb}
+
+    .bnav{position:fixed;bottom:0;left:0;right:0;z-index:100;background:#fff;border-top:1px solid #e5e7eb;padding:4px 0 8px}
+    .bnav-btn{display:flex;flex-direction:column;align-items:center;padding:6px 4px;font-size:10px;color:#9ca3af;transition:.2s;min-width:56px;min-height:48px;justify-content:center;border:none;background:none;cursor:pointer}
+    .bnav-btn.active{color:#0d9488}
+    .bnav-btn i{font-size:18px;margin-bottom:2px}
+
+    .toast-box{position:fixed;top:12px;left:12px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+    .toast{padding:12px 16px;border-radius:12px;color:#fff;font-weight:600;font-size:13px;transform:translateY(-120px);transition:.35s;box-shadow:0 8px 24px rgba(0,0,0,.2);display:flex;align-items:center;gap:8px;pointer-events:auto}
+    .toast.show{transform:translateY(0)}
+    .toast.ok{background:linear-gradient(135deg,#10b981,#059669)}
+    .toast.err{background:linear-gradient(135deg,#ef4444,#dc2626)}
+    .toast.inf{background:linear-gradient(135deg,#3b82f6,#2563eb)}
+    .toast.wrn{background:linear-gradient(135deg,#f59e0b,#d97706)}
+
+    .tab{display:none}.tab.on{display:block;animation:fadeUp .25s ease-out}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+    .modal-bg{position:fixed;inset:0;z-index:200;display:none;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.5)}
+    .modal-bg.show{display:flex}
+    .modal-box{background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:85vh;overflow-y:auto;padding:20px;animation:slideUp .3s ease-out}
+    @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+    .modal-bar{width:40px;height:4px;background:#d1d5db;border-radius:2px;margin:0 auto 16px}
+
+    @media(min-width:1024px){
+      body{padding-bottom:0}
+      .bnav{display:none!important}
+      .modal-bg{align-items:center}
+      .modal-box{border-radius:20px;max-width:520px}
+    }
+
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:#94a3b8;border-radius:4px}
+    .card-hover{transition:transform .2s}.card-hover:active{transform:scale(.97)}
+    input,select,textarea{font-size:16px!important}
+    .badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;white-space:nowrap}
+    .color-dot{width:24px;height:24px;border-radius:6px;border:2px solid rgba(0,0,0,.08);display:inline-block;flex-shrink:0}
+
+    /* GRAFİK SABİT BOYUT - büyüme engeli */
+    .chart-box{position:relative;width:100%;max-height:220px;overflow:hidden}
+    .chart-box canvas{width:100%!important;max-height:220px!important}
+
+    @media print{.no-print{display:none!important}body{padding-bottom:0}}
+  </style>
+</head>
+<body class="dark:bg-gray-950 text-gray-800 dark:text-gray-200">
+
+<div id="toastBox" class="toast-box"></div>
+
+<!-- ==================== LOGIN ==================== -->
+<div id="loginScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-teal-600 via-teal-800 to-gray-900 flex items-center justify-center p-5">
+  <div class="absolute inset-0 overflow-hidden pointer-events-none">
+    <div class="absolute -top-32 -right-32 w-64 h-64 bg-teal-400/20 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-32 -left-32 w-64 h-64 bg-amber-400/15 rounded-full blur-3xl"></div>
+  </div>
+  <div class="w-full max-w-sm relative z-10">
+    <div class="text-center mb-8">
+      <div class="text-6xl mb-3">🎨</div>
+      <h1 class="text-3xl font-black text-white tracking-tight">BoyacıPro</h1>
+      <p class="text-teal-300 font-semibold text-sm mt-1">ENTERPRISE</p>
+      <p class="text-teal-400/70 text-xs mt-2">Kurumsal Stok & Satış Sistemi</p>
+    </div>
+    <div class="bg-white/10 backdrop-blur-xl rounded-2xl p-6 border border-white/20">
+      <div class="space-y-4">
+        <div class="relative">
+          <i class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-white/50"></i>
+          <input id="loginUser" type="text" placeholder="Kullanıcı adı" autocomplete="username" class="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 outline-none focus:ring-2 focus:ring-teal-400">
+        </div>
+        <div class="relative">
+          <i class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-white/50"></i>
+          <input id="loginPass" type="password" placeholder="Şifre" autocomplete="current-password" class="w-full pl-11 pr-4 py-3.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 outline-none focus:ring-2 focus:ring-teal-400">
+        </div>
+        <button id="loginBtn" type="button" class="w-full bg-white text-teal-700 font-bold py-3.5 rounded-xl shadow-lg active:scale-[0.98] transition-transform">
+          <i class="fas fa-right-to-bracket mr-2"></i>Giriş Yap
+        </button>
+      </div>
+    </div>
+    <div class="mt-5 p-4 bg-white/5 backdrop-blur rounded-xl text-xs text-white/50">
+      <p class="font-semibold mb-2 text-white/70">🔑 Demo Hesaplar:</p>
+      <div class="grid grid-cols-2 gap-2">
+        <span class="bg-white/10 px-2 py-1.5 rounded-lg text-center">admin / 1234</span>
+        <span class="bg-white/10 px-2 py-1.5 rounded-lg text-center">calisan / 1234</span>
+        <span class="bg-white/10 px-2 py-1.5 rounded-lg text-center">muhasebe / 1234</span>
+        <span class="bg-white/10 px-2 py-1.5 rounded-lg text-center">depo / 1234</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" class="hidden min-h-screen">
+
+  <!-- DESKTOP SIDEBAR -->
+  <aside id="sidebar" class="hidden lg:flex w-64 bg-white dark:bg-gray-900 shadow-xl flex-col fixed h-full z-40 border-r border-gray-200 dark:border-gray-800">
+    <div class="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+      <span class="text-2xl">🎨</span>
+      <div><h2 class="text-lg font-black">BoyacıPro</h2><p class="text-[10px] text-teal-600 font-bold uppercase">Enterprise</p></div>
+    </div>
+    <nav class="flex-1 p-3 space-y-1 overflow-y-auto" id="deskNav">
+      <div class="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase">Ana Menü</div>
+      <button onclick="go('dashboard')" data-tab="dashboard" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-chart-pie w-5 text-center text-teal-500"></i>Dashboard</button>
+      <button onclick="go('pos')" data-tab="pos" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-cash-register w-5 text-center text-amber-500"></i>Satış (POS)</button>
+      <button onclick="go('inventory')" data-tab="inventory" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-boxes-stacked w-5 text-center text-blue-500"></i>Stok</button>
+      <button onclick="go('customers')" data-tab="customers" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-users w-5 text-center text-green-500"></i>Müşteriler</button>
+      <div class="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase mt-2">Finans</div>
+      <button onclick="go('finance')" data-tab="finance" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-scale-balanced w-5 text-center text-emerald-500"></i>Kar / Zarar</button>
+      <button onclick="go('veresiye')" data-tab="veresiye" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-hand-holding-dollar w-5 text-center text-amber-500"></i>Veresiye</button>
+      <button onclick="go('reports')" data-tab="reports" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-chart-bar w-5 text-center text-indigo-500"></i>Raporlar</button>
+      <div class="px-3 py-2 text-[10px] font-bold text-gray-400 uppercase mt-2">Araçlar</div>
+      <button onclick="go('colormixer')" data-tab="colormixer" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-palette w-5 text-center text-pink-500"></i>Renk Karıştırıcı</button>
+      <button onclick="go('suppliers')" data-tab="suppliers" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-truck w-5 text-center text-orange-500"></i>Tedarikçiler</button>
+      <button onclick="go('employees')" data-tab="employees" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-id-badge w-5 text-center text-violet-500"></i>Personel</button>
+      <button onclick="go('logs')" data-tab="logs" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-clipboard-list w-5 text-center text-gray-500"></i>Loglar</button>
+      <button onclick="go('settings')" data-tab="settings" class="nd w-full text-left px-3 py-2.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 flex items-center gap-3 text-sm transition"><i class="fas fa-gear w-5 text-center text-gray-500"></i>Ayarlar</button>
+    </nav>
+    <div class="p-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+      <button onclick="toggleTheme()" class="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs flex items-center gap-2"><i class="fas fa-moon"></i>Tema</button>
+      <button onclick="doLogout()" class="w-full px-3 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-xs font-semibold flex items-center gap-2"><i class="fas fa-sign-out-alt"></i>Çıkış</button>
+    </div>
+  </aside>
+
+  <!-- TOP BAR -->
+  <header class="sticky top-0 z-30 bg-white/90 dark:bg-gray-900/90 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 px-4 py-3">
+    <div class="flex justify-between items-center max-w-7xl mx-auto">
+      <div>
+        <h2 id="pgTitle" class="text-lg font-bold tracking-tight">Dashboard</h2>
+        <p id="pgSub" class="text-[11px] text-gray-500 dark:text-gray-400">Günlük özet</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <button onclick="toggleNotif()" class="relative p-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 active:scale-95 transition-transform">
+          <i class="fas fa-bell text-gray-600 dark:text-gray-400"></i>
+          <span id="nBadge" class="absolute -top-0.5 -right-0.5 w-5 h-5 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center" style="display:none">0</span>
+        </button>
+        <div class="flex items-center gap-2 px-2 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800">
+          <div class="w-7 h-7 rounded-full bg-gradient-to-br from-teal-500 to-teal-700 flex items-center justify-center text-white text-xs font-bold" id="uAvatar">A</div>
+          <span id="uName" class="text-xs font-semibold hidden sm:block">Admin</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main class="p-4 max-w-7xl mx-auto lg:ml-64">
+
+    <!-- DASHBOARD -->
+    <section id="t-dashboard" class="tab on">
+      <div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Bugün Ciro</span><i class="fas fa-turkish-lira-sign text-teal-500 text-sm"></i></div>
+          <h3 id="k1" class="text-xl font-black">₺0</h3><p id="k1c" class="text-[10px] text-green-500 mt-0.5">↑ 0%</p>
+        </div>
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Net Kar</span><i class="fas fa-chart-line text-green-500 text-sm"></i></div>
+          <h3 id="k2" class="text-xl font-black text-green-600">₺0</h3><p id="k2c" class="text-[10px] text-gray-400 mt-0.5">Marj: 0%</p>
+        </div>
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Satış Adedi</span><i class="fas fa-receipt text-blue-500 text-sm"></i></div>
+          <h3 id="k3" class="text-xl font-black text-blue-600">0</h3><p class="text-[10px] text-gray-400 mt-0.5">Bugün</p>
+        </div>
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Toplam Ürün</span><i class="fas fa-boxes-stacked text-purple-500 text-sm"></i></div>
+          <h3 id="k4" class="text-xl font-black text-purple-600">0</h3><p class="text-[10px] text-gray-400 mt-0.5">Katalogda</p>
+        </div>
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Kritik Stok</span><i class="fas fa-triangle-exclamation text-red-500 text-sm"></i></div>
+          <h3 id="k5" class="text-xl font-black text-red-600">0</h3><p class="text-[10px] text-red-400 mt-0.5">Dikkat!</p>
+        </div>
+        <div class="card-hover bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <div class="flex items-center justify-between mb-1"><span class="text-[10px] font-bold text-gray-400 uppercase">Veresiye</span><i class="fas fa-hand-holding-dollar text-amber-500 text-sm"></i></div>
+          <h3 id="k6" class="text-xl font-black text-amber-600">₺0</h3><p class="text-[10px] text-gray-400 mt-0.5">Tahsil edilecek</p>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+        <h4 class="font-bold text-sm mb-3">📈 Satış Trendi (7 Gün)</h4>
+        <div class="chart-box"><canvas id="chSales"></canvas></div>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <h4 class="font-bold text-sm mb-3">🎨 Kategoriler</h4>
+          <div class="chart-box"><canvas id="chCat"></canvas></div>
+        </div>
+        <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+          <h4 class="font-bold text-sm mb-3">💳 Ödeme Yöntemleri</h4>
+          <div class="chart-box"><canvas id="chPay"></canvas></div>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+        <h4 class="font-bold text-sm mb-3">⚠️ Uyarılar</h4>
+        <div id="alertBox" class="space-y-2 text-xs"></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <h4 class="font-bold text-sm mb-3">📋 Son İşlemler</h4>
+        <div id="actBox" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- POS -->
+    <section id="t-pos" class="tab">
+      <div class="bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3">
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <i class="fas fa-barcode absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+            <input id="posQ" type="text" placeholder="Ürün ara veya barkod..." class="w-full pl-10 pr-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none focus:ring-2 focus:ring-teal-500">
+          </div>
+          <button onclick="cartAdd()" class="px-5 py-3 rounded-xl bg-teal-600 text-white font-bold active:scale-95 transition-transform"><i class="fas fa-plus"></i></button>
+        </div>
+      </div>
+      <div id="posGrid" class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-3"></div>
+      <div class="bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3">
+        <div class="flex justify-between items-center mb-2">
+          <h4 class="font-bold text-sm"><i class="fas fa-shopping-cart mr-1 text-teal-500"></i>Sepet</h4>
+          <button onclick="cartClear()" class="text-xs text-red-500 font-semibold px-2">Temizle</button>
+        </div>
+        <div id="cartBox" class="space-y-2 max-h-60 overflow-y-auto min-h-[80px]"></div>
+        <div class="border-t border-gray-200 dark:border-gray-700 mt-2 pt-2 space-y-1">
+          <div class="flex justify-between text-xs"><span class="text-gray-500">Ara Toplam</span><span id="cSub" class="font-semibold">₺0</span></div>
+          <div class="flex justify-between text-xs"><span class="text-gray-500">KDV (%20)</span><span id="cTax" class="font-semibold">₺0</span></div>
+          <div class="flex gap-2 mt-1">
+            <input id="cDisc" type="number" placeholder="İskonto ₺" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none text-sm">
+            <input id="cDiscP" type="number" placeholder="İskonto %" class="flex-1 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none text-sm">
+          </div>
+          <div class="flex justify-between text-lg font-black border-t border-gray-200 dark:border-gray-700 pt-2 mt-1">
+            <span>TOPLAM</span><span id="cTotal" class="text-teal-600">₺0</span>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-3">
+        <div class="grid grid-cols-2 gap-2 mb-2">
+          <select id="cPay" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none text-sm font-semibold">
+            <option value="Nakit">💵 Nakit</option><option value="Kredi Kartı">💳 Kart</option><option value="Veresiye">📝 Veresiye</option><option value="Havale">🏦 Havale</option>
+          </select>
+          <select id="cCust" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none text-sm">
+            <option value="">Müşteri (opsiyonel)</option>
+          </select>
+        </div>
+        <button onclick="doCheckout()" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold active:scale-[0.98] transition-transform shadow-lg shadow-green-500/20"><i class="fas fa-check mr-2"></i>SATIŞI TAMAMLA</button>
+        <div class="flex gap-2 mt-2">
+          <button onclick="holdSale()" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold active:scale-95 transition-transform"><i class="fas fa-pause mr-1"></i>Beklet</button>
+          <button onclick="loadHeld()" class="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold active:scale-95 transition-transform"><i class="fas fa-clock mr-1"></i>Bekleyen (<span id="heldN">0</span>)</button>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-3 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <h4 class="font-bold text-sm mb-2">🕐 Son Satışlar</h4>
+        <div id="posHist" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- INVENTORY -->
+    <section id="t-inventory" class="tab">
+      <div class="flex gap-2 mb-3">
+        <input id="invQ" type="text" placeholder="Ürün ara..." class="flex-1 px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none focus:ring-2 focus:ring-teal-500">
+        <button onclick="openM('prodM')" class="px-4 py-3 rounded-xl bg-teal-600 text-white font-bold active:scale-95 transition-transform"><i class="fas fa-plus"></i></button>
+      </div>
+      <div class="flex gap-2 mb-3 overflow-x-auto pb-1">
+        <select id="invCat" class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none text-sm flex-shrink-0">
+          <option value="all">Tümü</option><option>İç Cephe Boyası</option><option>Dış Cephe Boyası</option><option>Ahşap/Metal Boyası</option><option>Astar & Sürücü</option><option>Fırça & Rulo</option><option>Tiner & İnceltici</option><option>Alçı & Macun</option><option>Diğer</option>
+        </select>
+        <select id="invStk" class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none text-sm flex-shrink-0">
+          <option value="all">Tüm Stoklar</option><option value="low">Kritik</option><option value="empty">Tükenmiş</option>
+        </select>
+        <button onclick="exportCSV()" class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-sm flex-shrink-0 active:scale-95 transition-transform"><i class="fas fa-download mr-1"></i>CSV</button>
+      </div>
+      <div id="invBox" class="space-y-2"></div>
+      <div class="mt-3 text-xs text-gray-500 text-center" id="invSum">0 ürün</div>
+    </section>
+
+    <!-- CUSTOMERS -->
+    <section id="t-customers" class="tab">
+      <div class="flex gap-2 mb-3">
+        <input id="custQ" type="text" placeholder="Müşteri ara..." class="flex-1 px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none">
+        <button onclick="openM('custM')" class="px-4 py-3 rounded-xl bg-green-600 text-white font-bold active:scale-95 transition-transform"><i class="fas fa-user-plus"></i></button>
+      </div>
+      <div id="custBox" class="space-y-2"></div>
+    </section>
+
+    <!-- FINANCE -->
+    <section id="t-finance" class="tab">
+      <div class="grid grid-cols-2 gap-3 mb-4">
+        <div class="bg-gradient-to-br from-green-500 to-green-600 p-4 rounded-2xl text-white shadow-lg"><p class="text-green-100 text-[10px] font-semibold">Toplam Gelir</p><h3 id="fRev" class="text-xl font-black mt-1">₺0</h3></div>
+        <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 rounded-2xl text-white shadow-lg"><p class="text-red-100 text-[10px] font-semibold">Toplam Gider</p><h3 id="fExp" class="text-xl font-black mt-1">₺0</h3></div>
+        <div class="bg-gradient-to-br from-blue-500 to-blue-600 p-4 rounded-2xl text-white shadow-lg"><p class="text-blue-100 text-[10px] font-semibold">Net Kar</p><h3 id="fNet" class="text-xl font-black mt-1">₺0</h3></div>
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 p-4 rounded-2xl text-white shadow-lg"><p class="text-purple-100 text-[10px] font-semibold">Kar Marjı</p><h3 id="fMar" class="text-xl font-black mt-1">0%</h3></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+        <div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm">📊 Aylık Karlılık</h4><button onclick="openM('expM')" class="px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-semibold active:scale-95 transition-transform">+ Gider</button></div>
+        <div class="chart-box"><canvas id="chProfit"></canvas></div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <h4 class="font-bold text-sm mb-3">📋 Giderler</h4>
+        <div id="expBox" class="space-y-2 text-xs max-h-60 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- VERESIYE -->
+    <section id="t-veresiye" class="tab">
+      <div class="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800 mb-4 text-center">
+        <p class="text-amber-600 dark:text-amber-400 text-xs font-semibold">Toplam Veresiye Alacağı</p>
+        <h3 id="verTotal" class="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">₺0</h3>
+      </div>
+      <div id="verBox" class="space-y-2"></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section id="t-reports" class="tab">
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        <button onclick="genReport('daily')" class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 text-center active:scale-95 transition-transform"><i class="fas fa-calendar-day text-2xl text-teal-500 mb-2 block"></i><span class="text-xs font-bold">Günlük</span></button>
+        <button onclick="genReport('weekly')" class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 text-center active:scale-95 transition-transform"><i class="fas fa-calendar-week text-2xl text-blue-500 mb-2 block"></i><span class="text-xs font-bold">Haftalık</span></button>
+        <button onclick="genReport('monthly')" class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 text-center active:scale-95 transition-transform"><i class="fas fa-calendar text-2xl text-purple-500 mb-2 block"></i><span class="text-xs font-bold">Aylık</span></button>
+      </div>
+      <div id="rptOut" class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800"><p class="text-gray-400 text-sm text-center py-8">Bir rapor tipi seçin</p></div>
+    </section>
+
+    <!-- COLOR MIXER -->
+    <section id="t-colormixer" class="tab">
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <h3 class="font-bold text-base mb-1">🎨 Renk Karıştırıcı</h3>
+        <p class="text-xs text-gray-500 mb-4">Boya renklerini karıştırın</p>
+        <div class="grid grid-cols-2 gap-4 mb-4">
+          <div><label class="text-xs font-semibold text-gray-500">Renk 1</label><input id="clr1" type="color" value="#FF0000" class="w-full h-14 rounded-xl cursor-pointer mt-1 border-0"><input id="clr1a" type="range" min="0" max="100" value="50" class="w-full mt-2 accent-teal-600"><p class="text-xs text-center text-gray-500 mt-1"><span id="clr1p">50</span>%</p></div>
+          <div><label class="text-xs font-semibold text-gray-500">Renk 2</label><input id="clr2" type="color" value="#0000FF" class="w-full h-14 rounded-xl cursor-pointer mt-1 border-0"><input id="clr2a" type="range" min="0" max="100" value="50" class="w-full mt-2 accent-teal-600"><p class="text-xs text-center text-gray-500 mt-1"><span id="clr2p">50</span>%</p></div>
+        </div>
+        <button onclick="doMix()" class="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm active:scale-[0.98] transition-transform"><i class="fas fa-wand-magic-sparkles mr-2"></i>Karıştır</button>
+        <div class="text-center mt-4"><p class="text-xs font-semibold text-gray-500 mb-2">Sonuç</p><div id="clrRes" class="w-28 h-28 rounded-2xl mx-auto shadow-lg border-4 border-white dark:border-gray-700" style="background:#800080"></div><p id="clrHex" class="text-lg font-black mt-2">#800080</p><p id="clrNm" class="text-xs text-gray-500">Mor</p></div>
+      </div>
+    </section>
+
+    <!-- SUPPLIERS -->
+    <section id="t-suppliers" class="tab">
+      <div class="flex gap-2 mb-3"><div class="flex-1"></div><button onclick="openM('suppM')" class="px-4 py-3 rounded-xl bg-orange-600 text-white font-bold active:scale-95 transition-transform text-sm"><i class="fas fa-plus mr-1"></i>Tedarikçi</button></div>
+      <div id="suppBox" class="space-y-2"></div>
+    </section>
+
+    <!-- EMPLOYEES -->
+    <section id="t-employees" class="tab">
+      <div class="flex gap-2 mb-3"><div class="flex-1"></div><button onclick="openM('empM')" class="px-4 py-3 rounded-xl bg-violet-600 text-white font-bold active:scale-95 transition-transform text-sm"><i class="fas fa-user-plus mr-1"></i>Personel</button></div>
+      <div id="empBox" class="space-y-2"></div>
+    </section>
+
+    <!-- LOGS -->
+    <section id="t-logs" class="tab">
+      <div class="flex gap-2 mb-3">
+        <input id="logQ" type="text" placeholder="Log ara..." class="flex-1 px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 outline-none">
+        <button onclick="clearLogs()" class="px-3 py-3 rounded-xl text-red-500 border border-red-200 dark:border-red-800 text-sm font-semibold active:scale-95 transition-transform">Temizle</button>
+      </div>
+      <div id="logBox" class="space-y-2"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="t-settings" class="tab">
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+        <h4 class="font-bold text-sm mb-3">🏪 Mağaza Bilgileri</h4>
+        <div class="space-y-3">
+          <input id="sShop" placeholder="Mağaza Adı" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+          <input id="sPhone" placeholder="Telefon" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+          <input id="sEmail" placeholder="E-posta" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+          <textarea id="sAddr" placeholder="Adres" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none h-16"></textarea>
+          <button onclick="saveSet()" class="w-full py-3 rounded-xl bg-teal-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 mb-4">
+        <h4 class="font-bold text-sm mb-3">⚙️ Sistem</h4>
+        <div class="space-y-2">
+          <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-xl"><span class="text-sm">KDV (%)</span><input id="sKdv" type="number" value="20" class="w-16 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 outline-none text-sm text-center"></div>
+          <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-xl"><span class="text-sm">Kritik Stok</span><input id="sLow" type="number" value="10" class="w-16 px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 outline-none text-sm text-center"></div>
+        </div>
+      </div>
+      <div class="bg-white dark:bg-gray-900 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800">
+        <h4 class="font-bold text-sm mb-3">💾 Veri Yönetimi</h4>
+        <div class="space-y-2">
+          <button onclick="doBackup()" class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-left text-sm active:scale-[0.98] transition-transform"><i class="fas fa-download mr-2 text-teal-500"></i>Yedekle (JSON)</button>
+          <label class="w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 text-left text-sm cursor-pointer block active:scale-[0.98] transition-transform"><i class="fas fa-upload mr-2 text-blue-500"></i>Geri Yükle<input type="file" id="restFile" class="hidden" onchange="doRestore(this)"></label>
+          <button onclick="if(confirm('⚠️ TÜM VERİLER SİLİNECEK!')){localStorage.clear();location.reload()}" class="w-full px-4 py-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-bold active:scale-[0.98] transition-transform"><i class="fas fa-trash mr-2"></i>Sıfırla</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- BOTTOM NAV (MOBILE) -->
+<nav id="bnav" class="bnav" style="display:none">
+  <div class="flex justify-around items-center max-w-lg mx-auto">
+    <button onclick="go('dashboard')" data-tab="dashboard" class="bnav-btn active"><i class="fas fa-chart-pie"></i><span>Ana Sayfa</span></button>
+    <button onclick="go('pos')" data-tab="pos" class="bnav-btn"><i class="fas fa-cash-register"></i><span>Satış</span></button>
+    <button onclick="go('inventory')" data-tab="inventory" class="bnav-btn"><i class="fas fa-boxes-stacked"></i><span>Stok</span></button>
+    <button onclick="go('customers')" data-tab="customers" class="bnav-btn"><i class="fas fa-users"></i><span>Müşteri</span></button>
+    <button onclick="go('finance')" data-tab="finance" class="bnav-btn"><i class="fas fa-coins"></i><span>Finans</span></button>
+  </div>
+</nav>
+
+<!-- ==================== MODALS ==================== -->
+<div id="prodM" class="modal-bg" onclick="if(event.target===this)closeM('prodM')">
+  <div class="modal-box"><div class="modal-bar"></div><h3 class="text-lg font-bold mb-4">📦 Yeni Ürün</h3>
+    <div class="space-y-3">
+      <input id="pNm" placeholder="Ürün Adı *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="pSku" placeholder="SKU / Barkod" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <select id="pCat" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><option>İç Cephe Boyası</option><option>Dış Cephe Boyası</option><option>Ahşap/Metal Boyası</option><option>Astar & Sürücü</option><option>Fırça & Rulo</option><option>Tiner & İnceltici</option><option>Alçı & Macun</option><option>Diğer</option></select>
+      <div class="grid grid-cols-2 gap-3"><input id="pCost" type="number" placeholder="Alış ₺ *" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><input id="pPrice" type="number" placeholder="Satış ₺ *" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"></div>
+      <div class="grid grid-cols-2 gap-3"><input id="pStock" type="number" placeholder="Stok *" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><input id="pMin" type="number" placeholder="Min Stok" value="10" class="px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"></div>
+      <input id="pClr" type="color" value="#FFFFFF" class="w-full h-10 rounded-xl cursor-pointer border-0"><p class="text-xs text-gray-500">Ürün rengi</p>
+    </div>
+    <div class="flex gap-2 mt-4"><button onclick="closeM('prodM')" class="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">İptal</button><button onclick="doSaveProd()" class="flex-1 py-3 rounded-xl bg-teal-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button></div>
+  </div>
+</div>
+
+<div id="custM" class="modal-bg" onclick="if(event.target===this)closeM('custM')">
+  <div class="modal-box"><div class="modal-bar"></div><h3 class="text-lg font-bold mb-4">👤 Yeni Müşteri</h3>
+    <div class="space-y-3">
+      <input id="cNm" placeholder="Ad Soyad / Firma *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="cPh" placeholder="Telefon" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="cEm" placeholder="E-posta" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="cAd" placeholder="Adres" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+    </div>
+    <div class="flex gap-2 mt-4"><button onclick="closeM('custM')" class="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">İptal</button><button onclick="doSaveCust()" class="flex-1 py-3 rounded-xl bg-green-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button></div>
+  </div>
+</div>
+
+<div id="suppM" class="modal-bg" onclick="if(event.target===this)closeM('suppM')">
+  <div class="modal-box"><div class="modal-bar"></div><h3 class="text-lg font-bold mb-4">🚚 Yeni Tedarikçi</h3>
+    <div class="space-y-3">
+      <input id="sNm" placeholder="Firma Adı *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="sCt" placeholder="İletişim Kişisi" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="sPh" placeholder="Telefon" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <select id="sCat" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><option>Boya Üreticisi</option><option>Hırdavatçı</option><option>Kimyevi Madde</option><option>Genel Toptancı</option></select>
+    </div>
+    <div class="flex gap-2 mt-4"><button onclick="closeM('suppM')" class="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">İptal</button><button onclick="doSaveSupp()" class="flex-1 py-3 rounded-xl bg-orange-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button></div>
+  </div>
+</div>
+
+<div id="expM" class="modal-bg" onclick="if(event.target===this)closeM('expM')">
+  <div class="modal-box"><div class="modal-bar"></div><h3 class="text-lg font-bold mb-4">💸 Gider Ekle</h3>
+    <div class="space-y-3">
+      <input id="eNm" placeholder="Gider Türü *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="eAmt" type="number" placeholder="Tutar ₺ *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <select id="eCat" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><option>Kira</option><option>Elektrik</option><option>Su</option><option>Personel Maaşı</option><option>Vergi</option><option>Ulaşım</option><option>Diğer</option></select>
+    </div>
+    <div class="flex gap-2 mt-4"><button onclick="closeM('expM')" class="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">İptal</button><button onclick="doSaveExp()" class="flex-1 py-3 rounded-xl bg-red-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button></div>
+  </div>
+</div>
+
+<div id="empM" class="modal-bg" onclick="if(event.target===this)closeM('empM')">
+  <div class="modal-box"><div class="modal-bar"></div><h3 class="text-lg font-bold mb-4">👤 Yeni Personel</h3>
+    <div class="space-y-3">
+      <input id="emNm" placeholder="Ad Soyad *" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <input id="emPh" placeholder="Telefon" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+      <select id="emRl" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none"><option value="employee">Çalışan</option><option value="cashier">Kasiyer</option><option value="warehouse">Depo</option><option value="manager">Müdür</option></select>
+      <input id="emSal" type="number" placeholder="Maaş ₺" class="w-full px-3 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 outline-none">
+    </div>
+    <div class="flex gap-2 mt-4"><button onclick="closeM('empM')" class="flex-1 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">İptal</button><button onclick="doSaveEmp()" class="flex-1 py-3 rounded-xl bg-violet-600 text-white font-bold text-sm active:scale-[0.98] transition-transform">Kaydet</button></div>
+  </div>
+</div>
+
+<div id="rcptM" class="modal-bg" onclick="if(event.target===this)closeM('rcptM')">
+  <div class="modal-box text-center"><div class="modal-bar"></div><div class="text-5xl mb-3">✅</div><h3 class="text-lg font-black">Satış Başarılı!</h3><p id="rcptInfo" class="text-sm text-gray-500 mb-4"></p>
+    <div class="flex gap-2 justify-center"><button onclick="doPrint()" class="px-5 py-3 rounded-xl bg-teal-600 text-white font-bold text-sm active:scale-[0.98] transition-transform"><i class="fas fa-print mr-2"></i>Fiş Yazdır</button><button onclick="closeM('rcptM')" class="px-5 py-3 rounded-xl border border-gray-200 dark:border-gray-700 font-semibold text-sm active:scale-[0.98] transition-transform">Kapat</button></div>
+  </div>
+</div>
+
+<div id="notifP" class="fixed right-3 top-14 w-72 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 z-50 hidden p-4 max-h-80 overflow-y-auto">
+  <div class="flex justify-between items-center mb-3"><h4 class="font-bold text-sm">🔔 Bildirimler</h4><button onclick="clearNotif()" class="text-xs text-gray-400">Temizle</button></div>
+  <div id="notifL" class="space-y-2 text-xs"></div>
+</div>
+
+<script>
+// ===== DB =====
+var DB={g:function(k,d){try{var v=localStorage.getItem('bp5_'+k);return v?JSON.parse(v):(d!==undefined?d:[])}catch(e){return d!==undefined?d:[]}},s:function(k,v){try{localStorage.setItem('bp5_'+k,JSON.stringify(v))}catch(e){toast('Depolama dolu!','err')}}};
+
+// ===== STATE =====
+var S={user:null,prods:DB.g('prods'),sales:DB.g('sales'),exps:DB.g('exps'),custs:DB.g('custs'),supps:DB.g('supps'),logs:DB.g('logs'),emps:DB.g('emps'),sets:DB.g('sets',{shop:'BoyacıPro',phone:'',email:'',addr:'',kdv:20,low:10}),cart:[],held:DB.g('held'),lastSale:null,ch:{}};
+
+// ===== TOAST =====
+function toast(msg,type){type=type||'ok';var c=document.getElementById('toastBox'),t=document.createElement('div');t.className='toast '+type;var ic={ok:'fa-check-circle',err:'fa-times-circle',inf:'fa-info-circle',wrn:'fa-exclamation-triangle'};t.innerHTML='<i class="fas '+(ic[type]||'fa-info-circle')+'"></i><span>'+msg+'</span>';c.appendChild(t);setTimeout(function(){t.classList.add('show')},10);setTimeout(function(){t.classList.remove('show');setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t)},400)},3000)}
+
+// ===== MODAL =====
+function openM(id){document.getElementById(id).classList.add('show')}
+function closeM(id){document.getElementById(id).classList.remove('show')}
+
+// ===== LOG =====
+function addLog(action,detail){S.logs.unshift({t:new Date().toISOString(),u:S.user?S.user.name:'Sistem',a:action,d:detail||''});if(S.logs.length>300)S.logs.length=300;DB.s('logs',S.logs);updNotif()}
+
+// ===== NOTIF =====
+function updNotif(){var low=S.prods.filter(function(p){return p.stock>0&&p.stock<=(p.min||10)}),empty=S.prods.filter(function(p){return p.stock===0}),vt=S.custs.reduce(function(a,c){return a+(c.ver||0)},0),cnt=low.length+empty.length+(vt>5000?1:0),badge=document.getElementById('nBadge');if(cnt>0){badge.textContent=cnt;badge.style.display='flex'}else{badge.style.display='none'}var h='';empty.forEach(function(p){h+='<div class="p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600 flex items-center gap-2"><span>⛔</span><span class="font-medium">'+p.name+' TÜKENDİ!</span></div>'});low.forEach(function(p){h+='<div class="p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600 flex items-center gap-2"><span>⚠️</span><span class="font-medium">'+p.name+' azalıyor ('+p.stock+')</span></div>'});if(vt>5000)h+='<div class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-blue-600 flex items-center gap-2"><span>💰</span><span>Veresiye: ₺'+vt.toFixed(0)+'</span></div>';document.getElementById('notifL').innerHTML=h||'<p class="text-gray-400 text-center py-4">Bildirim yok ✓</p>'}
+function toggleNotif(){document.getElementById('notifP').classList.toggle('hidden')}
+function clearNotif(){document.getElementById('nBadge').style.display='none';document.getElementById('notifL').innerHTML='<p class="text-gray-400 text-center py-4">Temizlendi ✓</p>';document.getElementById('notifP').classList.add('hidden')}
+
+// ===== SEED =====
+function seed(){
+  if(S.prods.length===0){S.prods=[
+    {id:1,name:'Selin İç Cephe Beyaz 10L',sku:'8690001',cat:'İç Cephe Boyası',cost:450,price:680,stock:24,min:10,clr:'#FFFFFF'},
+    {id:2,name:'Marshall Dış Cephe Gri 15L',sku:'8690002',cat:'Dış Cephe Boyası',cost:620,price:890,stock:12,min:8,clr:'#808080'},
+    {id:3,name:'Pro Rulo Set 18cm',sku:'8690003',cat:'Fırça & Rulo',cost:85,price:140,stock:45,min:15,clr:'#FFD700'},
+    {id:4,name:'Sentetik Tiner 5L',sku:'8690004',cat:'Tiner & İnceltici',cost:180,price:290,stock:18,min:10,clr:'#FFFACD'},
+    {id:5,name:'Ahşap Astar Beyaz 2.5L',sku:'8690005',cat:'Astar & Sürücü',cost:210,price:350,stock:8,min:10,clr:'#F5F5F5'},
+    {id:6,name:'Polisan Elegance Mavi 2.5L',sku:'8690006',cat:'İç Cephe Boyası',cost:320,price:520,stock:15,min:8,clr:'#4169E1'},
+    {id:7,name:'DYO Metal Boya Siyah 1L',sku:'8690007',cat:'Ahşap/Metal Boyası',cost:150,price:260,stock:22,min:10,clr:'#1C1C1C'},
+    {id:8,name:'Alçı Sıva 25kg',sku:'8690008',cat:'Alçı & Macun',cost:95,price:160,stock:60,min:20,clr:'#FAEBD7'},
+    {id:9,name:'Fırça Seti 3lü',sku:'8690009',cat:'Fırça & Rulo',cost:45,price:85,stock:35,min:10,clr:'#D2691E'},
+    {id:10,name:'Su Bazlı Astar 5L',sku:'8690010',cat:'Astar & Sürücü',cost:280,price:450,stock:5,min:8,clr:'#FFFFF0'},
+    {id:11,name:'Jotun Dış Cephe Krem 15L',sku:'8690011',cat:'Dış Cephe Boyası',cost:750,price:1100,stock:7,min:5,clr:'#FFF8DC'},
+    {id:12,name:'Selülozik Tiner 3L',sku:'8690012',cat:'Tiner & İnceltici',cost:120,price:200,stock:0,min:10,clr:'#FFFACD'}
+  ];DB.s('prods',S.prods)}
+  if(S.custs.length===0){S.custs=[{id:1,name:'Ali Yılmaz',phone:'0532 111 2233',email:'',addr:'Kadıköy',spent:2450,ver:680,last:'2025-01-10'},{id:2,name:'Fatma Demir',phone:'0533 222 3344',email:'',addr:'Üsküdar',spent:1200,ver:0,last:'2025-01-08'},{id:3,name:'İnşaat Ltd.',phone:'0212 333 4455',email:'',addr:'Ataşehir',spent:18500,ver:4200,last:'2025-01-12'}];DB.s('custs',S.custs)}
+  if(S.supps.length===0){S.supps=[{id:1,name:'Filli Boya',contact:'Ahmet Bey',phone:'0212 555 1111',cat:'Boya Üreticisi',total:15400,debt:3200},{id:2,name:'Marshall',contact:'Ayşe Hanım',phone:'0212 555 2222',cat:'Boya Üreticisi',total:12800,debt:0},{id:3,name:'Hırdavatçı Mehmet',contact:'Mehmet Usta',phone:'0532 555 3333',cat:'Hırdavatçı',total:4500,debt:800}];DB.s('supps',S.supps)}
+  if(S.emps.length===0){S.emps=[{id:1,name:'Ahmet Kaya',phone:'0532 100 2030',role:'manager',sal:25000,start:'2024-01-15',st:'active'},{id:2,name:'Zeynep Arslan',phone:'0533 200 3040',role:'cashier',sal:18000,start:'2024-03-01',st:'active'}];DB.s('emps',S.emps)}
+}
+
+// ===== LOGIN =====
+document.getElementById('loginBtn').addEventListener('click',function(){
+  var u=document.getElementById('loginUser').value.trim().toLowerCase(),p=document.getElementById('loginPass').value;
+  var users={admin:{name:'Yönetici',role:'admin',av:'Y'},calisan:{name:'Çalışan',role:'employee',av:'Ç'},muhasebe:{name:'Muhasebeci',role:'accountant',av:'M'},depo:{name:'Depocu',role:'warehouse',av:'D'}};
+  if(users[u]&&p==='1234'){
+    S.user=users[u];S.user.username=u;
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('uName').textContent=S.user.name;
+    document.getElementById('uAvatar').textContent=S.user.av;
+    if(window.innerWidth<1024)document.getElementById('bnav').style.display='block';
+    seed();go('dashboard');updNotif();
+    addLog('Giriş',S.user.name);
+    toast('Hoş geldiniz, '+S.user.name+'! 👋');
+  }else{toast('Hatalı kullanıcı adı veya şifre!','err')}
+});
+document.getElementById('loginPass').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('loginBtn').click()}});
+document.getElementById('loginUser').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();document.getElementById('loginPass').focus()}});
+
+function doLogout(){addLog('Çıkış');location.reload()}
+
+// ===== NAV =====
+var titles={dashboard:['Dashboard','Günlük özet'],pos:['Satış (POS)','Hızlı satış'],inventory:['Stok Yönetimi','Ürün & stok'],customers:['Müşteriler','CRM'],finance:['Kar / Zarar','Finansal analiz'],veresiye:['Veresiye','Tahsilat'],reports:['Raporlar','Detaylı analiz'],colormixer:['Renk Karıştırıcı','Boya önizleme'],suppliers:['Tedarikçiler','Tedarik yönetimi'],employees:['Personel','Çalışan yönetimi'],logs:['İşlem Logları','Audit'],settings:['Ayarlar','Sistem']};
+
+function go(id){
+  var tabs=document.querySelectorAll('.tab');for(var i=0;i<tabs.length;i++)tabs[i].classList.remove('on');
+  var tab=document.getElementById('t-'+id);if(tab)tab.classList.add('on');
+  var btns=document.querySelectorAll('.nd,.bnav-btn');for(var j=0;j<btns.length;j++)btns[j].classList.remove('active','bg-teal-50','dark:bg-teal-900/20','text-teal-700');
+  var ab=document.querySelectorAll('[data-tab="'+id+'"]');for(var k=0;k<ab.length;k++){ab[k].classList.add('active');if(ab[k].classList.contains('nd'))ab[k].classList.add('bg-teal-50','dark:bg-teal-900/20','text-teal-700')}
+  var info=titles[id]||['Sayfa',''];document.getElementById('pgTitle').textContent=info[0];document.getElementById('pgSub').textContent=info[1];
+  var r={dashboard:rDash,pos:rPOS,inventory:rInv,customers:rCust,finance:rFin,veresiye:rVer,suppliers:rSupp,employees:rEmp,logs:rLogs,settings:rSet};
+  if(r[id])r[id]();
+  document.getElementById('notifP').classList.add('hidden');window.scrollTo(0,0);
+}
+
+function toggleTheme(){document.documentElement.classList.toggle('dark')}
+
+// ===== DASHBOARD =====
+function rDash(){
+  var today=new Date().toISOString().slice(0,10),yest=new Date(Date.now()-86400000).toISOString().slice(0,10);
+  var tS=S.sales.filter(function(s){return s.date&&s.date.startsWith(today)}),yS=S.sales.filter(function(s){return s.date&&s.date.startsWith(yest)});
+  var tR=tS.reduce(function(a,s){return a+s.total},0),yR=yS.reduce(function(a,s){return a+s.total},0);
+  var tP=tS.reduce(function(a,s){return a+(s.profit||0)},0);
+  var mar=tR>0?((tP/tR)*100).toFixed(1):0,chg=yR>0?(((tR-yR)/yR)*100).toFixed(0):0;
+  var vt=S.custs.reduce(function(a,c){return a+(c.ver||0)},0);
+
+  document.getElementById('k1').textContent='₺'+tR.toFixed(0);
+  document.getElementById('k1c').textContent=(chg>=0?'↑ +':'↓ ')+chg+'%';
+  document.getElementById('k1c').className='text-[10px] mt-0.5 '+(chg>=0?'text-green-500':'text-red-500');
+  document.getElementById('k2').textContent='₺'+tP.toFixed(0);
+  document.getElementById('k2c').textContent='Marj: '+mar+'%';
+  document.getElementById('k3').textContent=tS.length;
+  document.getElementById('k4').textContent=S.prods.length;
+  document.getElementById('k5').textContent=S.prods.filter(function(p){return p.stock<=(p.min||10)}).length;
+  document.getElementById('k6').textContent='₺'+vt.toFixed(0);
+
+  var ah='';
+  S.prods.filter(function(p){return p.stock===0}).forEach(function(p){ah+='<div class="flex items-center gap-2 p-2 bg-red-50 dark:bg-red-900/20 rounded-lg text-red-600"><i class="fas fa-circle-xmark text-xs"></i><span class="font-medium">'+p.name+' TÜKENDİ!</span></div>'});
+  S.prods.filter(function(p){return p.stock>0&&p.stock<=(p.min||10)}).forEach(function(p){ah+='<div class="flex items-center gap-2 p-2 bg-amber-50 dark:bg-amber-900/20 rounded-lg text-amber-600"><i class="fas fa-triangle-exclamation text-xs"></i><span class="font-medium">'+p.name+' azalıyor ('+p.stock+')</span></div>'});
+  document.getElementById('alertBox').innerHTML=ah||'<p class="text-gray-400 text-center py-3">Uyarı yok ✓</p>';
+
+  document.getElementById('actBox').innerHTML=S.logs.slice(0,8).map(function(l){
+    return'<div class="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"><div class="w-1.5 h-1.5 rounded-full bg-teal-500 flex-shrink-0"></div><span class="text-gray-400 whitespace-nowrap text-[10px]">'+new Date(l.t).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</span><span><b>'+l.u+'</b> '+l.a+(l.d?' <span class="text-gray-400">- '+l.d+'</span>':'')+'</span></div>'}).join('')||'<p class="text-gray-400 text-center py-3">Henüz işlem yok</p>';
+
+  rDashCharts();
+}
+
+function rDashCharts(){
+  // SABİT BOYUT: destroy + recreate with maintainAspectRatio:false
+  if(S.ch.sales)S.ch.sales.destroy();
+  var days=[],sD=[];
+  for(var i=6;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);var key=d.toISOString().slice(0,10);days.push(d.toLocaleDateString('tr-TR',{day:'numeric',month:'short'}));sD.push(S.sales.filter(function(s){return s.date&&s.date.startsWith(key)}).reduce(function(a,s){return a+s.total},0))}
+  S.ch.sales=new Chart(document.getElementById('chSales'),{
+    type:'line',data:{labels:days,datasets:[{label:'Ciro',data:sD,borderColor:'#0d9488',backgroundColor:'rgba(13,148,136,0.1)',fill:true,tension:0.4,borderWidth:2,pointRadius:3,pointBackgroundColor:'#0d9488'}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:10}}},x:{grid:{display:false},ticks:{font:{size:10}}}}}
+  });
+
+  if(S.ch.cat)S.ch.cat.destroy();
+  var cats=[];S.prods.forEach(function(p){if(cats.indexOf(p.cat)===-1)cats.push(p.cat)});
+  S.ch.cat=new Chart(document.getElementById('chCat'),{
+    type:'doughnut',data:{labels:cats,datasets:[{data:cats.map(function(c){return S.prods.filter(function(p){return p.cat===c}).length}),backgroundColor:['#0d9488','#3b82f6','#f59e0b','#ef4444','#8b5cf6','#10b981','#6366f1','#ec4899'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,font:{size:10},padding:10}}}}
+  });
+
+  if(S.ch.pay)S.ch.pay.destroy();
+  var pT=['Nakit','Kredi Kartı','Veresiye','Havale'];
+  var pD=pT.map(function(t){return S.sales.filter(function(s){return s.payment===t}).reduce(function(a,s){return a+s.total},0)});
+  S.ch.pay=new Chart(document.getElementById('chPay'),{
+    type:'pie',data:{labels:pT,datasets:[{data:pD,backgroundColor:['#10b981','#3b82f6','#f59e0b','#8b5cf6'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{usePointStyle:true,boxWidth:8,font:{size:10},padding:10}}}}
+  });
+}
+
+// ===== POS =====
+function rPOS(){rPosGrid();rCart();rPosHist();rCustDrop();document.getElementById('heldN').textContent=S.held.length}
+
+function rPosGrid(){
+  document.getElementById('posGrid').innerHTML=S.prods.filter(function(p){return p.stock>0}).slice(0,12).map(function(p){
+    return'<button onclick="qAdd('+p.id+')" class="p-2.5 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 active:border-teal-500 active:scale-95 text-left transition"><div class="flex items-center gap-1.5 mb-1"><div class="color-dot" style="background:'+(p.clr||'#ccc')+'"></div><span class="text-[11px] font-medium truncate flex-1">'+p.name.substring(0,18)+'</span></div><div class="flex justify-between items-center"><span class="text-sm font-black text-teal-600">₺'+p.price+'</span><span class="text-[10px] text-gray-400">'+p.stock+'</span></div></button>'}).join('')}
+
+function cartAdd(){
+  var q=document.getElementById('posQ').value.toLowerCase().trim();
+  if(!q)return toast('Ürün adı veya barkod girin','wrn');
+  var p=null;for(var i=0;i<S.prods.length;i++){var x=S.prods[i];if(x.name.toLowerCase().indexOf(q)!==-1||(x.sku&&x.sku.indexOf(q)!==-1)||x.id.toString()===q){p=x;break}}
+  if(!p)return toast('Ürün bulunamadı!','err');if(p.stock<1)return toast('Stokta yok!','err');
+  var ex=null;for(var j=0;j<S.cart.length;j++){if(S.cart[j].id===p.id){ex=S.cart[j];break}}
+  if(ex){if(ex.qty<p.stock)ex.qty++;else return toast('Stok yetersiz!','wrn')}else S.cart.push({id:p.id,name:p.name,price:p.price,cost:p.cost,clr:p.clr,qty:1});
+  document.getElementById('posQ').value='';rCart()}
+
+function qAdd(id){
+  var p=null;for(var i=0;i<S.prods.length;i++){if(S.prods[i].id===id){p=S.prods[i];break}}
+  if(!p||p.stock<1)return toast('Stokta yok!','wrn');
+  var ex=null;for(var j=0;j<S.cart.length;j++){if(S.cart[j].id===p.id){ex=S.cart[j];break}}
+  if(ex){if(ex.qty<p.stock)ex.qty++;else return toast('Stok yetersiz!','wrn')}else S.cart.push({id:p.id,name:p.name,price:p.price,cost:p.cost,clr:p.clr,qty:1});
+  rCart()}
+
+function rCart(){
+  var kdv=S.sets.kdv||20,h='';
+  for(var i=0;i<S.cart.length;i++){var c=S.cart[i];h+='<div class="flex items-center gap-2 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-xl"><div class="color-dot flex-shrink-0" style="background:'+(c.clr||'#ccc')+'"></div><span class="text-sm font-medium truncate flex-1 min-w-0">'+c.name+'</span><button onclick="chQty('+i+',-1)" class="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 font-bold text-sm active:scale-90 transition">−</button><span class="w-6 text-center font-bold text-sm">'+c.qty+'</span><button onclick="chQty('+i+',1)" class="w-8 h-8 rounded-lg bg-gray-200 dark:bg-gray-700 font-bold text-sm active:scale-90 transition">+</button><span class="font-bold text-sm w-16 text-right">₺'+(c.price*c.qty).toFixed(0)+'</span><button onclick="rmCart('+i+')" class="text-red-400 active:text-red-600 ml-1"><i class="fas fa-times-circle"></i></button></div>'}
+  document.getElementById('cartBox').innerHTML=h||'<div class="flex items-center justify-center h-20 text-gray-400 text-sm"><i class="fas fa-shopping-cart mr-2"></i>Sepet boş</div>';
+  var sub=0;for(var k=0;k<S.cart.length;k++)sub+=S.cart[k].price*S.cart[k].qty;
+  var da=parseFloat(document.getElementById('cDisc').value)||0,dp=parseFloat(document.getElementById('cDiscP').value)||0;
+  var td=da+(sub*dp/100),ad=Math.max(0,sub-td),tax=ad*kdv/(100+kdv);
+  document.getElementById('cSub').textContent='₺'+sub.toFixed(0);
+  document.getElementById('cTax').textContent='₺'+tax.toFixed(0);
+  document.getElementById('cTotal').textContent='₺'+ad.toFixed(0)}
+
+function chQty(i,d){S.cart[i].qty+=d;if(S.cart[i].qty<1)S.cart.splice(i,1);rCart()}
+function rmCart(i){S.cart.splice(i,1);rCart()}
+function cartClear(){S.cart=[];rCart()}
+
+document.getElementById('cDisc').addEventListener('input',rCart);
+document.getElementById('cDiscP').addEventListener('input',rCart);
+document.getElementById('posQ').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();cartAdd()}});
+
+function rCustDrop(){var h='<option value="">Müşteri (opsiyonel)</option>';for(var i=0;i<S.custs.length;i++){var c=S.custs[i];h+='<option value="'+c.id+'">'+c.name+(c.ver>0?' (Veresiye: ₺'+c.ver+')':'')+'</option>'}document.getElementById('cCust').innerHTML=h}
+
+function doCheckout(){
+  if(S.cart.length===0)return toast('Sepet boş!','err');
+  var sub=0,ct=0;for(var i=0;i<S.cart.length;i++){sub+=S.cart[i].price*S.cart[i].qty;ct+=S.cart[i].cost*S.cart[i].qty}
+  var da=parseFloat(document.getElementById('cDisc').value)||0,dp=parseFloat(document.getElementById('cDiscP').value)||0;
+  var td=da+(sub*dp/100),total=Math.max(0,sub-td),profit=total-ct;
+  var pay=document.getElementById('cPay').value,cid=document.getElementById('cCust').value;
+  for(var j=0;j<S.cart.length;j++){var ci=S.cart[j];for(var k=0;k<S.prods.length;k++){if(S.prods[k].id===ci.id){S.prods[k].stock=Math.max(0,S.prods[k].stock-ci.qty);break}}}
+  if(cid){for(var m=0;m<S.custs.length;m++){if(S.custs[m].id===parseInt(cid)){S.custs[m].spent=(S.custs[m].spent||0)+total;S.custs[m].last=new Date().toISOString().slice(0,10);if(pay==='Veresiye')S.custs[m].ver=(S.custs[m].ver||0)+total;break}}}
+  var sale={id:Date.now(),date:new Date().toISOString(),total:total,profit:profit,cost:ct,discount:td,payment:pay,custId:cid?parseInt(cid):null,items:S.cart.map(function(c){return{id:c.id,name:c.name,qty:c.qty,price:c.price,cost:c.cost}}),user:S.user.name};
+  S.sales.unshift(sale);S.lastSale=sale;DB.s('sales',S.sales);DB.s('prods',S.prods);DB.s('custs',S.custs);
+  S.cart=[];document.getElementById('cDisc').value='';document.getElementById('cDiscP').value='';
+  rCart();rPOS();updNotif();addLog('Satış','₺'+total.toFixed(0)+' | '+pay);
+  document.getElementById('rcptInfo').textContent='₺'+total.toFixed(0)+' | '+pay+' | '+new Date().toLocaleString('tr-TR');
+  openM('rcptM')}
+
+function holdSale(){if(S.cart.length===0)return toast('Sepet boş!','wrn');S.held.push({id:Date.now(),items:S.cart.slice(),time:new Date().toISOString()});DB.s('held',S.held);S.cart=[];rCart();document.getElementById('heldN').textContent=S.held.length;toast('Satış beklemeye alındı ⏸️','inf')}
+function loadHeld(){if(S.held.length===0)return toast('Bekleyen satış yok','inf');var h=S.held.shift();S.cart=h.items;DB.s('held',S.held);rCart();document.getElementById('heldN').textContent=S.held.length;toast('Bekleyen satış yüklendi ✓','inf')}
+
+function rPosHist(){var h='';for(var i=0;i<Math.min(S.sales.length,8);i++){var s=S.sales[i];h+='<div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"><div><p class="font-medium">'+new Date(s.date).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'})+'</p><p class="text-gray-400">'+s.items.length+' ürün • '+s.payment+'</p></div><span class="font-black text-teal-600">₺'+s.total.toFixed(0)+'</span></div>'}document.getElementById('posHist').innerHTML=h||'<p class="text-gray-400 text-center py-3">Henüz satış yok</p>'}
+
+// ===== INVENTORY =====
+function rInv(){
+  var term=(document.getElementById('invQ').value||'').toLowerCase(),cat=document.getElementById('invCat').value,sf=document.getElementById('invStk').value;
+  var filtered=S.prods.filter(function(p){if(p.name.toLowerCase().indexOf(term)===-1)return false;if(cat!=='all'&&p.cat!==cat)return false;if(sf==='low'&&(p.stock<=0||p.stock>(p.min||10)))return false;if(sf==='empty'&&p.stock!==0)return false;return true});
+  var h='';for(var i=0;i<filtered.length;i++){var p=filtered[i];var sc=p.stock===0?'bg-red-100 text-red-700':p.stock<=(p.min||10)?'bg-amber-100 text-amber-700':'bg-green-100 text-green-700';var st=p.stock===0?'Tükendi':p.stock<=(p.min||10)?'Kritik':'Yeterli';
+    h+='<div class="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800"><div class="flex items-center gap-2 mb-2"><div class="color-dot" style="background:'+(p.clr||'#ccc')+'"></div><div class="flex-1 min-w-0"><p class="font-medium text-sm truncate">'+p.name+'</p><p class="text-[10px] text-gray-400">'+p.cat+' • '+(p.sku||'')+'</p></div><span class="badge '+sc+'">'+st+'</span></div><div class="flex justify-between items-center text-sm"><div><span class="text-gray-400 text-xs">Alış: ₺'+p.cost+'</span><br><span class="font-black text-teal-600">₺'+p.price+'</span></div><div class="text-right"><span class="text-gray-400 text-xs">Stok:</span><br><span class="font-black '+(p.stock<=(p.min||10)?'text-red-500':'text-green-500')+'">'+p.stock+'</span></div><div class="flex gap-1 ml-2"><button onclick="editProd('+p.id+')" class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-900/20 text-blue-500 active:scale-90 transition"><i class="fas fa-pen text-xs"></i></button><button onclick="adjStock('+p.id+')" class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 text-amber-500 active:scale-90 transition"><i class="fas fa-sliders text-xs"></i></button><button onclick="delProd('+p.id+')" class="w-8 h-8 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 active:scale-90 transition"><i class="fas fa-trash text-xs"></i></button></div></div></div>'}
+  document.getElementById('invBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Ürün bulunamadı</p>';
+  var tv=S.prods.reduce(function(a,p){return a+p.stock*p.cost},0);
+  document.getElementById('invSum').textContent=filtered.length+' ürün • Toplam değer: ₺'+tv.toFixed(0)}
+
+document.getElementById('invQ').addEventListener('input',rInv);
+document.getElementById('invCat').addEventListener('change',rInv);
+document.getElementById('invStk').addEventListener('change',rInv);
+
+function doSaveProd(){var nm=document.getElementById('pNm').value.trim(),cost=parseFloat(document.getElementById('pCost').value),price=parseFloat(document.getElementById('pPrice').value),stock=parseInt(document.getElementById('pStock').value);if(!nm||isNaN(cost)||isNaN(price)||isNaN(stock))return toast('Zorunlu alanları doldurun!','err');S.prods.push({id:Date.now(),name:nm,sku:document.getElementById('pSku').value||'SKU'+Date.now().toString().slice(-6),cat:document.getElementById('pCat').value,cost:cost,price:price,stock:stock,min:parseInt(document.getElementById('pMin').value)||10,clr:document.getElementById('pClr').value});DB.s('prods',S.prods);closeM('prodM');rInv();updNotif();addLog('Ürün Eklendi',nm);toast('"'+nm+'" eklendi ✓');document.getElementById('pNm').value='';document.getElementById('pCost').value='';document.getElementById('pPrice').value='';document.getElementById('pStock').value=''}
+
+function delProd(id){if(!confirm('Ürün silinsin mi?'))return;var p=null;for(var i=0;i<S.prods.length;i++){if(S.prods[i].id===id){p=S.prods[i];break}}S.prods=S.prods.filter(function(x){return x.id!==id});DB.s('prods',S.prods);rInv();updNotif();addLog('Ürün Silindi',p?p.name:'');toast('Silindi','wrn')}
+
+function editProd(id){var p=null;for(var i=0;i<S.prods.length;i++){if(S.prods[i].id===id){p=S.prods[i];break}}if(!p)return;var np=prompt('"'+p.name+'" yeni fiyat (mevcut: ₺'+p.price+'):',p.price);if(np!==null&&!isNaN(parseFloat(np))){p.price=parseFloat(np);DB.s('prods',S.prods);rInv();addLog('Fiyat Güncellendi',p.name+': ₺'+p.price);toast('Fiyat güncellendi ✓')}}
+
+function adjStock(id){var p=null;for(var i=0;i<S.prods.length;i++){if(S.prods[i].id===id){p=S.prods[i];break}}if(!p)return;var adj=prompt('"'+p.name+'" stok ayarı (mevcut: '+p.stock+'). +/- sayı girin:','0');if(adj!==null&&!isNaN(parseInt(adj))){p.stock=Math.max(0,p.stock+parseInt(adj));DB.s('prods',S.prods);rInv();updNotif();addLog('Stok Ayarlandı',p.name+': '+p.stock);toast('Stok: '+p.stock)}}
+
+// ===== CUSTOMERS =====
+function rCust(){var term=(document.getElementById('custQ').value||'').toLowerCase();var filtered=S.custs.filter(function(c){return c.name.toLowerCase().indexOf(term)!==-1});var h='';for(var i=0;i<filtered.length;i++){var c=filtered[i];h+='<div class="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800"><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">'+c.name.charAt(0)+'</div><div class="flex-1 min-w-0"><p class="font-medium text-sm truncate">'+c.name+'</p><p class="text-[10px] text-gray-400">'+(c.phone||'')+'</p></div>'+(c.ver>0?'<span class="badge bg-red-100 text-red-600">₺'+c.ver+'</span>':'<span class="badge bg-green-100 text-green-600">Temiz</span>')+'</div><div class="flex justify-between items-center text-xs text-gray-500"><span>Toplam: ₺'+(c.spent||0).toFixed(0)+'</span><span>Son: '+(c.last||'-')+'</span>'+(c.ver>0?'<button onclick="collectVer('+c.id+')" class="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 font-semibold text-xs active:scale-95 transition">Tahsilat</button>':'')+'</div></div>'}document.getElementById('custBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Müşteri bulunamadı</p>'}
+document.getElementById('custQ').addEventListener('input',rCust);
+
+function doSaveCust(){var nm=document.getElementById('cNm').value.trim();if(!nm)return toast('Müşteri adı gerekli!','err');S.custs.push({id:Date.now(),name:nm,phone:document.getElementById('cPh').value,email:document.getElementById('cEm').value,addr:document.getElementById('cAd').value,spent:0,ver:0,last:''});DB.s('custs',S.custs);closeM('custM');rCust();addLog('Müşteri Eklendi',nm);toast('"'+nm+'" eklendi ✓');document.getElementById('cNm').value='';document.getElementById('cPh').value='';document.getElementById('cEm').value='';document.getElementById('cAd').value=''}
+
+function collectVer(id){var c=null;for(var i=0;i<S.custs.length;i++){if(S.custs[i].id===id){c=S.custs[i];break}}if(!c||c.ver<=0)return;var amt=prompt(c.name+' - Veresiye: ₺'+c.ver+'\nTahsilat tutarı:',c.ver);if(amt!==null&&!isNaN(parseFloat(amt))&&parseFloat(amt)>0){var col=Math.min(parseFloat(amt),c.ver);c.ver-=col;DB.s('custs',S.custs);rCust();rVer();addLog('Veresiye Tahsilatı',c.name+': ₺'+col);toast('₺'+col+' tahsil edildi ✓')}}
+
+// ===== FINANCE =====
+function rFin(){
+  var tr=S.sales.reduce(function(a,s){return a+s.total},0),tc=S.sales.reduce(function(a,s){return a+(s.cost||0)},0),te=S.exps.reduce(function(a,e){return a+e.amount},0),np=tr-tc-te,mar=tr>0?((np/tr)*100).toFixed(1):0;
+  document.getElementById('fRev').textContent='₺'+tr.toFixed(0);document.getElementById('fExp').textContent='₺'+(tc+te).toFixed(0);document.getElementById('fNet').textContent='₺'+np.toFixed(0);document.getElementById('fMar').textContent=mar+'%';
+  var h='';for(var i=0;i<S.exps.length;i++){var e=S.exps[i];h+='<div class="flex justify-between items-center p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"><div><p class="font-medium">'+e.name+'</p><p class="text-gray-400">'+e.cat+' • '+(e.date||'')+'</p></div><span class="font-bold text-red-500">-₺'+e.amount.toFixed(0)+'</span></div>'}document.getElementById('expBox').innerHTML=h||'<p class="text-gray-400 text-center py-3">Gider yok</p>';
+  rFinChart()}
+
+function rFinChart(){
+  if(S.ch.profit)S.ch.profit.destroy();
+  var months=[],rD=[],cD=[],pD=[],mN=['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  for(var i=5;i>=0;i--){var d=new Date();d.setMonth(d.getMonth()-i);var key=d.toISOString().slice(0,7);months.push(mN[d.getMonth()]+' '+d.getFullYear());var mS=S.sales.filter(function(s){return s.date&&s.date.startsWith(key)});var mR=mS.reduce(function(a,s){return a+s.total},0);var mC=mS.reduce(function(a,s){return a+(s.cost||0)},0);var mE=S.exps.filter(function(e){return e.date&&e.date.startsWith(key)}).reduce(function(a,e){return a+e.amount},0);rD.push(mR);cD.push(mC+mE);pD.push(mR-mC-mE)}
+  S.ch.profit=new Chart(document.getElementById('chProfit'),{
+    type:'bar',data:{labels:months,datasets:[{label:'Gelir',data:rD,backgroundColor:'#10b981',borderRadius:4,borderWidth:0},{label:'Gider',data:cD,backgroundColor:'#ef4444',borderRadius:4,borderWidth:0},{label:'Kar',data:pD,backgroundColor:'#3b82f6',borderRadius:4,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,boxWidth:8,font:{size:10}}}},scales:{y:{beginAtZero:true,grid:{color:'rgba(0,0,0,0.04)'}},x:{grid:{display:false}}}}})}
+
+function doSaveExp(){var nm=document.getElementById('eNm').value.trim(),amt=parseFloat(document.getElementById('eAmt').value);if(!nm||isNaN(amt))return toast('Zorunlu alanları doldurun!','err');S.exps.push({id:Date.now(),name:nm,amount:amt,cat:document.getElementById('eCat').value,date:new Date().toISOString().slice(0,10)});DB.s('exps',S.exps);closeM('expM');rFin();addLog('Gider Eklendi',nm+': ₺'+amt);toast('Gider kaydedildi');document.getElementById('eNm').value='';document.getElementById('eAmt').value=''}
+
+// ===== VERESIYE =====
+function rVer(){var debtors=S.custs.filter(function(c){return c.ver>0});var total=debtors.reduce(function(a,c){return a+c.ver},0);document.getElementById('verTotal').textContent='₺'+total.toFixed(0);var h='';for(var i=0;i<debtors.length;i++){var c=debtors[i];h+='<div class="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800"><div class="flex justify-between items-center mb-2"><p class="font-medium text-sm">'+c.name+'</p><span class="font-black text-red-500">₺'+c.ver.toFixed(0)+'</span></div><div class="flex justify-between items-center"><span class="text-xs text-gray-400">Son: '+(c.last||'-')+'</span><button onclick="collectVer('+c.id+')" class="px-3 py-1.5 rounded-lg bg-green-100 dark:bg-green-900/20 text-green-600 font-semibold text-xs active:scale-95 transition">Tahsilat</button></div></div>'}document.getElementById('verBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Veresiye borcu yok ✓</p>'}
+
+// ===== REPORTS =====
+function genReport(type){var now=new Date(),sd,title;if(type==='daily'){sd=now.toISOString().slice(0,10);title='Günlük Rapor'}else if(type==='weekly'){sd=new Date(now.getTime()-7*86400000).toISOString().slice(0,10);title='Haftalık Rapor'}else{sd=new Date(now.getTime()-30*86400000).toISOString().slice(0,10);title='Aylık Rapor'}var fS=S.sales.filter(function(s){return s.date>=sd});var rev=fS.reduce(function(a,s){return a+s.total},0),cost=fS.reduce(function(a,s){return a+(s.cost||0)},0),profit=fS.reduce(function(a,s){return a+(s.profit||0)},0),avg=fS.length>0?rev/fS.length:0;var pb={};fS.forEach(function(s){pb[s.payment]=(pb[s.payment]||0)+s.total});var ps={};fS.forEach(function(s){(s.items||[]).forEach(function(i){ps[i.name]=(ps[i.name]||0)+i.qty})});var tp=Object.entries(ps).sort(function(a,b){return b[1]-a[1]}).slice(0,5);
+  document.getElementById('rptOut').innerHTML='<div class="text-center mb-4"><h3 class="text-lg font-black">'+title+'</h3><p class="text-[10px] text-gray-500">'+sd+' → '+now.toISOString().slice(0,10)+'</p></div><div class="grid grid-cols-2 gap-3 mb-4"><div class="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-xl"><p class="text-[10px] text-green-600 font-semibold">Gelir</p><p class="text-lg font-black text-green-700">₺'+rev.toFixed(0)+'</p></div><div class="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-xl"><p class="text-[10px] text-red-600 font-semibold">Maliyet</p><p class="text-lg font-black text-red-700">₺'+cost.toFixed(0)+'</p></div><div class="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl"><p class="text-[10px] text-blue-600 font-semibold">Kar</p><p class="text-lg font-black text-blue-700">₺'+profit.toFixed(0)+'</p></div><div class="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl"><p class="text-[10px] text-purple-600 font-semibold">Ort. Satış</p><p class="text-lg font-black text-purple-700">₺'+avg.toFixed(0)+'</p></div></div><div class="space-y-2 mb-4"><h4 class="font-bold text-xs">💳 Ödeme Dağılımı</h4>'+Object.entries(pb).map(function(kv){return'<div class="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm"><span>'+kv[0]+'</span><span class="font-bold">₺'+kv[1].toFixed(0)+'</span></div>'}).join('')+'</div><div class="space-y-2"><h4 class="font-bold text-xs">🏆 En Çok Satanlar</h4>'+tp.map(function(t,i){return'<div class="flex justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg text-sm"><span>'+(i+1)+'. '+t[0].substring(0,25)+'</span><span class="font-bold">'+t[1]+' adet</span></div>'}).join('')+'</div><p class="text-[10px] text-gray-400 text-center mt-4">Satış: '+fS.length+' | Ürün: '+Object.keys(ps).length+'</p>';addLog('Rapor',title)}
+
+// ===== COLOR MIXER =====
+function doMix(){var c1=document.getElementById('clr1').value,c2=document.getElementById('clr2').value,a1=parseInt(document.getElementById('clr1a').value),a2=parseInt(document.getElementById('clr2a').value),total=a1+a2||1;var r1=parseInt(c1.slice(1,3),16),g1=parseInt(c1.slice(3,5),16),b1=parseInt(c1.slice(5,7),16),r2=parseInt(c2.slice(1,3),16),g2=parseInt(c2.slice(3,5),16),b2=parseInt(c2.slice(5,7),16);var r=Math.round((r1*a1+r2*a2)/total),g=Math.round((g1*a1+g2*a2)/total),b=Math.round((b1*a1+b2*a2)/total);var hex='#'+r.toString(16).padStart(2,'0')+g.toString(16).padStart(2,'0')+b.toString(16).padStart(2,'0');document.getElementById('clrRes').style.background=hex;document.getElementById('clrHex').textContent=hex.toUpperCase();var nm='Karışık Ton';if(r>200&&g>200&&b>200)nm='Beyaz / Açık';else if(r<50&&g<50&&b<50)nm='Siyah / Koyu';else if(r>150&&g<100&&b<100)nm='Kırmızı Ton';else if(r<100&&g>150&&b<100)nm='Yeşil Ton';else if(r<100&&g<100&&b>150)nm='Mavi Ton';else if(r>150&&g>150&&b<100)nm='Sarı Ton';else if(r>150&&g<100&&b>150)nm='Mor Ton';else if(r>150&&g>100&&b<100)nm='Turuncu Ton';document.getElementById('clrNm').textContent=nm}
+document.getElementById('clr1a').addEventListener('input',function(){document.getElementById('clr1p').textContent=this.value;doMix()});
+document.getElementById('clr2a').addEventListener('input',function(){document.getElementById('clr2p').textContent=this.value;doMix()});
+document.getElementById('clr1').addEventListener('input',doMix);
+document.getElementById('clr2').addEventListener('input',doMix);
+
+// ===== SUPPLIERS =====
+function rSupp(){var h='';for(var i=0;i<S.supps.length;i++){var s=S.supps[i];h+='<div class="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800"><div class="flex justify-between items-start mb-2"><div><p class="font-medium text-sm">'+s.name+'</p><p class="text-[10px] text-gray-400">'+(s.contact||'')+' • '+(s.phone||'')+'</p></div><button onclick="delSupp('+s.id+')" class="text-red-400 active:text-red-600"><i class="fas fa-trash text-xs"></i></button></div><div class="flex justify-between text-xs"><span class="badge bg-gray-100 dark:bg-gray-800 text-gray-600">'+s.cat+'</span><span>Alış: ₺'+(s.total||0).toFixed(0)+'</span><span class="'+(s.debt>0?'text-red-500 font-bold':'text-green-500')+'">Borç: ₺'+(s.debt||0).toFixed(0)+'</span></div></div>'}document.getElementById('suppBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Tedarikçi yok</p>'}
+
+function doSaveSupp(){var nm=document.getElementById('sNm').value.trim();if(!nm)return toast('Firma adı gerekli!','err');S.supps.push({id:Date.now(),name:nm,contact:document.getElementById('sCt').value,phone:document.getElementById('sPh').value,cat:document.getElementById('sCat').value,total:0,debt:0});DB.s('supps',S.supps);closeM('suppM');rSupp();addLog('Tedarikçi Eklendi',nm);toast('"'+nm+'" eklendi ✓');document.getElementById('sNm').value='';document.getElementById('sCt').value='';document.getElementById('sPh').value=''}
+function delSupp(id){if(!confirm('Silinsin mi?'))return;S.supps=S.supps.filter(function(x){return x.id!==id});DB.s('supps',S.supps);rSupp();toast('Silindi','wrn')}
+
+// ===== EMPLOYEES =====
+function rEmp(){var rl={employee:'Çalışan',cashier:'Kasiyer',warehouse:'Depo',accountant:'Muhasebe',manager:'Müdür'};var rc={employee:'bg-gray-100 text-gray-600',cashier:'bg-blue-100 text-blue-600',warehouse:'bg-amber-100 text-amber-600',accountant:'bg-purple-100 text-purple-600',manager:'bg-red-100 text-red-600'};var h='';for(var i=0;i<S.emps.length;i++){var e=S.emps[i];h+='<div class="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-800"><div class="flex items-center gap-3 mb-2"><div class="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-violet-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">'+e.name.charAt(0)+'</div><div class="flex-1"><p class="font-medium text-sm">'+e.name+'</p><span class="badge '+(rc[e.role]||'bg-gray-100')+'">'+(rl[e.role]||e.role)+'</span></div><button onclick="delEmp('+e.id+')" class="text-red-400 active:text-red-600"><i class="fas fa-trash text-xs"></i></button></div><div class="flex justify-between text-xs text-gray-500"><span>📞 '+(e.phone||'-')+'</span><span>💰 ₺'+(e.sal||0).toLocaleString()+'</span></div></div>'}document.getElementById('empBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Personel yok</p>'}
+
+function doSaveEmp(){var nm=document.getElementById('emNm').value.trim();if(!nm)return toast('Personel adı gerekli!','err');S.emps.push({id:Date.now(),name:nm,phone:document.getElementById('emPh').value,role:document.getElementById('emRl').value,sal:parseFloat(document.getElementById('emSal').value)||0,start:new Date().toISOString().slice(0,10),st:'active'});DB.s('emps',S.emps);closeM('empM');rEmp();addLog('Personel Eklendi',nm);toast('"'+nm+'" eklendi ✓');document.getElementById('emNm').value='';document.getElementById('emPh').value='';document.getElementById('emSal').value=''}
+function delEmp(id){if(!confirm('Silinsin mi?'))return;S.emps=S.emps.filter(function(x){return x.id!==id});DB.s('emps',S.emps);rEmp();toast('Silindi','wrn')}
+
+// ===== LOGS =====
+function rLogs(){var term=(document.getElementById('logQ').value||'').toLowerCase();var filtered=S.logs.filter(function(l){return l.a.toLowerCase().indexOf(term)!==-1||l.d.toLowerCase().indexOf(term)!==-1||l.u.toLowerCase().indexOf(term)!==-1});var h='';for(var i=0;i<Math.min(filtered.length,50);i++){var l=filtered[i];h+='<div class="bg-white dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 flex items-center gap-2 text-xs"><span class="text-gray-400 whitespace-nowrap font-mono text-[10px]">'+new Date(l.t).toLocaleString('tr-TR')+'</span><span class="badge bg-teal-100 dark:bg-teal-900/30 text-teal-700 flex-shrink-0">'+l.u+'</span><span class="font-medium flex-1 truncate">'+l.a+'</span><span class="text-gray-400 truncate hidden sm:inline">'+l.d+'</span></div>'}document.getElementById('logBox').innerHTML=h||'<p class="text-gray-400 text-center py-8">Log yok</p>'}
+document.getElementById('logQ').addEventListener('input',rLogs);
+function clearLogs(){if(!confirm('Tüm loglar silinsin mi?'))return;S.logs=[];DB.s('logs',[]);rLogs();toast('Loglar temizlendi')}
+
+// ===== SETTINGS =====
+function rSet(){var s=S.sets;document.getElementById('sShop').value=s.shop||'';document.getElementById('sPhone').value=s.phone||'';document.getElementById('sEmail').value=s.email||'';document.getElementById('sAddr').value=s.addr||'';document.getElementById('sKdv').value=s.kdv||20;document.getElementById('sLow').value=s.low||10}
+function saveSet(){S.sets={shop:document.getElementById('sShop').value,phone:document.getElementById('sPhone').value,email:document.getElementById('sEmail').value,addr:document.getElementById('sAddr').value,kdv:parseInt(document.getElementById('sKdv').value)||20,low:parseInt(document.getElementById('sLow').value)||10};DB.s('sets',S.sets);addLog('Ayarlar Güncellendi');toast('Ayarlar kaydedildi ✓')}
+
+// ===== BACKUP =====
+function doBackup(){var data={prods:S.prods,sales:S.sales,exps:S.exps,custs:S.custs,supps:S.supps,emps:S.emps,sets:S.sets,logs:S.logs,exportDate:new Date().toISOString(),version:'5.0'};var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='BoyaciPro_Yedek_'+new Date().toISOString().slice(0,10)+'.json';a.click();addLog('Yedek İndirildi');toast('Yedek indirildi ✓')}
+function doRestore(input){var file=input.files[0];if(!file)return;var reader=new FileReader();reader.onload=function(e){try{var data=JSON.parse(e.target.result);if(data.prods){S.prods=data.prods;DB.s('prods',S.prods)}if(data.sales){S.sales=data.sales;DB.s('sales',S.sales)}if(data.exps){S.exps=data.exps;DB.s('exps',S.exps)}if(data.custs){S.custs=data.custs;DB.s('custs',S.custs)}if(data.supps){S.supps=data.supps;DB.s('supps',S.supps)}if(data.emps){S.emps=data.emps;DB.s('emps',S.emps)}if(data.sets){S.sets=data.sets;DB.s('sets',S.sets)}if(data.logs){S.logs=data.logs;DB.s('logs',S.logs)}go('dashboard');updNotif();addLog('Veri Geri Yüklendi');toast('Yedek yüklendi ✓')}catch(err){toast('Geçersiz dosya!','err')}};reader.readAsText(file);input.value=''}
+
+// ===== CSV =====
+function exportCSV(){var csv='Ürün,SKU,Kategori,Alış,Satış,Stok\n';for(var i=0;i<S.prods.length;i++){var p=S.prods[i];csv+='"'+p.name+'","'+(p.sku||'')+'","'+p.cat+'",'+p.cost+','+p.price+','+p.stock+'\n'}var blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='BoyaciPro_Stok_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSV indirildi ✓')}
+
+// ===== RECEIPT =====
+function doPrint(){var s=S.lastSale;if(!s)return;var shop=S.sets.shop||'BoyacıPro',phone=S.sets.phone||'',w=window.open('','_blank','width=320,height=600');var ih='';for(var i=0;i<s.items.length;i++){var item=s.items[i];ih+='<div style="display:flex;justify-content:space-between;font-size:11px"><span>'+item.name.substring(0,20)+' x'+item.qty+'</span><span>₺'+(item.price*item.qty).toFixed(2)+'</span></div>'}w.document.write('<html><head><title>Fiş</title><style>body{font-family:monospace;font-size:11px;text-align:center;padding:10px}hr{border:1px dashed #000;margin:4px 0}</style></head><body><h3 style="margin:0">'+shop+'</h3><p style="margin:2px 0">'+phone+'</p><hr><div style="text-align:left;font-size:10px"><p>Tarih: '+new Date(s.date).toLocaleString('tr-TR')+'</p><p>Fiş No: '+s.id.toString().slice(-6)+'</p><p>Ödeme: '+s.payment+'</p></div><hr><div style="text-align:left">'+ih+'</div><hr>'+(s.discount>0?'<div style="display:flex;justify-content:space-between"><span>İskonto:</span><span>-₺'+s.discount.toFixed(2)+'</span></div>':'')+'<div style="display:flex;justify-content:space-between;font-size:14px;font-weight:bold"><span>TOPLAM:</span><span>₺'+s.total.toFixed(2)+'</span></div><hr><p style="font-size:9px;color:#888">BoyacıPro Enterprise</p></body></html>');w.print()}
+
+// ===== ESC =====
+document.addEventListener('keydown',function(e){if(e.key==='Escape'){var ms=document.querySelectorAll('.modal-bg.show');for(var i=0;i<ms.length;i++)ms[i].classList.remove('show');document.getElementById('notifP').classList.add('hidden')}});
+</script>
+</body>
+</html>
+
